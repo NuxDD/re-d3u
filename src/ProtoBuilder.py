@@ -1,93 +1,48 @@
 import re, sys
-from enum import Enum
+from Patterns import PATTERN_TYPE, Patterns
+from TreeNode import NODE_TYPE, TreeNode
 
-class ProtoBuilder:
+class ProtoBuilder():
+    tree_head: TreeNode = None
 
-    proto_type=None
-    proto_name=None
-    proto_data=None
+    def __init__(self, buffer):
+        self.tree_head = self.build_tree(buffer, 0)
 
-    KNOWN_PROTOBUFF_TYPES = ['int64', 'int32', 'string', 'bool']
-    
-    MATCHING_PROTOBUFF_TYPES = {
-        'long': 'int64',
-        'int': 'int32',
-        'string': 'string',
-        'bool': 'bool'
-    }
+    def build_tree(self, buffer, depth: int) -> TreeNode:
+        cl_matches = Patterns.get_classes(buffer, depth)
+        enum_matches = Patterns.get_enums(buffer, depth)
 
-    class PROTOTYPE(Enum):
-        CLASS=1
-        ENUM=2
+        node = None
+        child = None
 
-    CLASS_PATTERN = r'class\s+(\w+)\s:.*\s\{([\s\S]*)\}'
-    ENUM_PATTERN = r'enum\s+(\w+)\s+\{([\s\S]*)\}'
-
-    def __init__(self, cs_buffer):
-        self.determine_proto_type(cs_buffer)
-        self.get_fields(cs_buffer)
-
-    def __repr__(self):
-        return f"Name={self.proto_name}; Type={self.proto_type};\nData={self.proto_data}"
-
-    def determine_proto_type(self, buffer):
-        if len(re.findall(self.CLASS_PATTERN, buffer)) > 0:
-            self.proto_type = self.PROTOTYPE.CLASS
-        elif len(re.findall(self.ENUM_PATTERN, buffer)) > 0:
-            self.proto_type = self.PROTOTYPE.ENUM
-
-    def get_fields(self, buffer):
-        match self.proto_type:
-            case self.PROTOTYPE.CLASS:
-                cs_match = re.findall(self.CLASS_PATTERN, buffer)
-                PATTERN = r'private\s+(\w+)\s(\w+);'
-            case self.PROTOTYPE.ENUM:
-                cs_match = re.findall(self.ENUM_PATTERN, buffer)
-                PATTERN = r'\[OriginalName\("(.*?)"\)]'
-            case _:
-                #FIXME
-                print("err: non-implemented")
+        if depth == 0:
+            if len(cl_matches)+len(enum_matches) != 1:
+                print("err: tree should have a single head")
+                print(cl_matches)
+                print(enum_matches)
                 sys.exit(1)
 
-        if len(cs_match) != 1:
-            print("err: buffer should contain at most 1 class/enum")
-            sys.exit(1)
+        for _, (class_name, class_content) in enumerate(cl_matches):
+            if node == None:
+                node = TreeNode(NODE_TYPE.CLASS, class_name)
+            child = self.build_tree(class_content, depth+1)
+            if child != None:
+                node.add_child(child)
+            cl_fields_matches = Patterns.get_fields(class_content, depth+1)
+            for _, (field_type, field_name) in enumerate(cl_fields_matches):
+                node.add_child(TreeNode(NODE_TYPE.FIELD, field_name, field_type))
 
-        self.proto_name = cs_match[0][0]
-        match_content = cs_match[0][1]
+        for _, (enum_name, enum_content) in enumerate(enum_matches):
+            if node == None:
+                node = TreeNode(NODE_TYPE.ENUM, enum_name)
+            node.add_child(self.build_tree(enum_content, depth+1))
 
-        fields_matches = re.findall(PATTERN, match_content)
-
-        match self.proto_type:
-            case self.PROTOTYPE.CLASS:
-                self.data_from_cs_fields(fields_matches)
-            case self.PROTOTYPE.ENUM:
-                self.proto_data = fields_matches
-            case _:
-                #FIXME
-                print("err: non-implemented")
-                sys.exit(1)
-
-    def data_from_cs_fields(self, matches: list):
-        self.proto_data = dict()
-        for _, (field_type, field_name) in enumerate(matches):
-            if field_type == 'UnknownFieldSet':
-                #FIXME: is this an important field ?
-                continue
-            if field_type in self.KNOWN_PROTOBUFF_TYPES:
-                self.proto_data[field_name]=self.MATCHING_PROTOBUFF_TYPES[field_type]
-            else:
-                self.proto_data[field_name]=field_type
+        return node
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage:")
-        sys.exit(1)
-        
-    cs_file_path = sys.argv[1]
-    file_buffer=""
-
-    with open(cs_file_path, 'r') as f:
+    file_path = sys.argv[1]
+    with open(file_path, 'r') as f:
         file_buffer = f.read()
-    
-    print(ProtoBuilder(file_buffer))
+
+    tmp_pb = ProtoBuilder(file_buffer)
+    print(tmp_pb.tree_head)
