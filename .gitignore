@@ -1,3 +1,4 @@
 dump_output/*
 re/*
 .research/*
+src/__pycache__/*
