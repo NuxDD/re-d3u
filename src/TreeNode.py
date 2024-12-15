@@ -3,7 +3,8 @@ from enum import Enum
 class NODE_TYPE(Enum):
     CLASS=1 #Message ?
     ENUM=2
-    FIELD=3
+    CLASS_FIELD=3
+    ENUM_FIELD=4
 
 class TreeNode():
     node_type: NODE_TYPE = None
@@ -14,9 +15,9 @@ class TreeNode():
     def __init__(self, n_type: NODE_TYPE, n_name: str, n_var_type = None):
         self.node_type = n_type
         self.node_name = n_name
-        if n_type == NODE_TYPE.FIELD:
+        if n_type == NODE_TYPE.CLASS_FIELD:
             if n_var_type == None:
-                print("err: type cannot be None for Fields")
+                print("err: type cannot be None for class Fields")
                 sys.exit(1)
         self.node_var_type = n_var_type
         self.node_children = list()
@@ -31,6 +32,8 @@ class TreeNode():
             for _, c in enumerate(self.node_children):
                 children_str += f"\t{c}\n"
             children_str += f"]"
-        if self.node_type == NODE_TYPE.FIELD:
-            return f"Name={self.node_name}; Type={self.node_var_type};{children_str}"
+        if self.node_type == NODE_TYPE.CLASS_FIELD:
+            return f"Name={self.node_name}: Type={self.node_var_type}"
+        if self.node_type == NODE_TYPE.ENUM_FIELD:
+            return f"Name={self.node_name}"
         return f"Name={self.node_name}; Type={self.node_type};{children_str}"

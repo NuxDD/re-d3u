@@ -2,7 +2,7 @@ import re, sys
 from enum import Enum
 
 class PATTERN_TYPE(Enum):
-    CLASS=1; ENUM=2; FIELD=3
+    CLASS=1; ENUM=2; CLASS_FIELD=3; ENUM_FIELD=4
 
 class Patterns():
     CLOSE_PATTERN=r')\}'
@@ -27,8 +27,10 @@ class Patterns():
                 pattern_type=r'class'
             case PATTERN_TYPE.ENUM:
                 pattern_type=r'enum'
-            case PATTERN_TYPE.FIELD:
+            case PATTERN_TYPE.CLASS_FIELD:
                 return indent + r'private\s+(\w+[\.\w]+?)\s(\w+);'
+            case PATTERN_TYPE.ENUM_FIELD:
+                return indent + r'\[OriginalName\(\"(.*?)\"\)\]'
             case _:
                 print("err: non-implemented")
                 sys.exit(1)
@@ -44,6 +46,9 @@ class Patterns():
         return re.findall(Patterns.get_pattern(PATTERN_TYPE.ENUM, depth), buffer, re.MULTILINE)
 
     @staticmethod
-    def get_fields(buffer: str, depth: int):
-        return re.findall(Patterns.get_pattern(PATTERN_TYPE.FIELD, depth), buffer, re.MULTILINE)
+    def get_class_fields(buffer: str, depth: int):
+        return re.findall(Patterns.get_pattern(PATTERN_TYPE.CLASS_FIELD, depth), buffer, re.MULTILINE)
 
+    @staticmethod
+    def get_enum_fields(buffer: str, depth: int):
+        return re.findall(Patterns.get_pattern(PATTERN_TYPE.ENUM_FIELD, depth), buffer, re.MULTILINE)
