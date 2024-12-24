@@ -5,14 +5,16 @@ class NODE_TYPE(Enum):
     ENUM=2
     CLASS_FIELD=3
     ENUM_FIELD=4
+    MESSAGE=5
 
 class TreeNode():
     node_type: NODE_TYPE = None
     node_name: str = None
     node_var_type: str = None
     node_children = None
+    node_field_number = None
 
-    def __init__(self, n_type: NODE_TYPE, n_name: str, n_var_type = None):
+    def __init__(self, n_type: NODE_TYPE, n_name: str, n_var_type = None, n_field_number = None):
         self.node_type = n_type
         self.node_name = n_name
         if n_type == NODE_TYPE.CLASS_FIELD:
@@ -20,6 +22,7 @@ class TreeNode():
                 print("err: type cannot be None for class Fields")
                 sys.exit(1)
         self.node_var_type = n_var_type
+        self.node_field_number = n_field_number
         self.node_children = list()
 
     def add_child(self, child_node):
@@ -37,3 +40,10 @@ class TreeNode():
         if self.node_type == NODE_TYPE.ENUM_FIELD:
             return f"Name={self.node_name}"
         return f"Name={self.node_name}; Type={self.node_type};{children_str}"
+
+    def pretty_display(self, depth = 0):
+        indent = "   "*depth
+        print(f"{self.node_var_type}:{self.node_name} ({self.node_field_number}); node={self.node_type};")
+        for _, child in enumerate(self.node_children):
+            print(indent + "---> ", sep="", end="")
+            child.pretty_display(depth+1)
